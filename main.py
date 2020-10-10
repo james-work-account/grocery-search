@@ -2,7 +2,6 @@ import argparse
 import re
 
 from prettytable import PrettyTable
-from price_parser import Price
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options
@@ -112,8 +111,8 @@ def search_online_shop(shop_name: str, url: str, not_found_css_selector: str, it
                 # In case lots of items are returned, you probably only need the first few
                 if i == MAX_LENGTH:
                     break
-                title = ''
 
+                title = ''
                 # Title should be in the format `Name Quantity`
                 # Some shops combine them together (use title_css_selector), others have them separate (use name_css_selector and weight_css_selector)
                 if title_css_selector is not None:
@@ -137,18 +136,18 @@ def search_online_shop(shop_name: str, url: str, not_found_css_selector: str, it
         print(e)
 
 
-def format_price(price: str):
-    pound_pattern = '£ ?[0-9.]+'
-    penny_pattern = '[0-9]+'
-    match_1 = re.search(pound_pattern, price)
-    match_2 = re.search(penny_pattern, price)
-    if match_1 is not None:
-        span = match_1.span()
-        return Price.fromstring(price[span[0]:span[1]])
-    if match_2 is not None:
-        span = match_2.span()
-        return Price.fromstring(f'0.{price[span[0]:span[1]]}')
-    return Price.fromstring(price).amount_float
+def format_price(price: str) -> float:
+    pound_pattern = '[0-9]+(\\.[0-9]{2}|$)'  # matches pounds, e.g. £2 or £2.99
+    penny_pattern = '[0-9]+'  # matches pennies, e.g. 65 (to be turned into 0.65 later)
+    pound_match = re.search(pound_pattern, price)
+    penny_match = re.search(penny_pattern, price)
+    if pound_match is not None:
+        span = pound_match.span()
+        return float(price[span[0]:span[1]])
+    if penny_match is not None:
+        span = penny_match.span()
+        return float(f'0.{price[span[0]:span[1]]}')
+    return 0  # Default - if the price doesn't match either regex, return the price unordered
 
 
 if __name__ == '__main__':
@@ -161,7 +160,7 @@ if __name__ == '__main__':
     SEARCH_TERM = args.item
     MAX_LENGTH = args.number_of_items
 
-    # Set up headless browser/driver
+    # Set up headless browser/driver (and set user-agent to pretend to not be headless)
     options = Options()
     options.add_argument('--headless')
     options.add_argument(
